@@ -1,6 +1,8 @@
 package main;
 
-import Task1.ImplicationTable;
+import Task1.BinaryCode;
+import Task1.GrayCode;
+import Task1.OneHotCode;
 import Task1.StateEncoding;
 import io.Parser;
 import lowlevel.ParsedFile;
@@ -10,6 +12,12 @@ import java.io.File;
 import lowlevel.State;
 
 import java.io.*;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 
 /**
@@ -24,24 +32,68 @@ public class Main {
     private static String input_file_name;
     private static ParsedFile fsm;
 
+    private final static String ONEHOTE = "onehot/";
+    private final static String GRAY = "gray/";
+    private final static String BINARY = "binary/";
+    private static String fsm_name;
+
     public static void main(String[] args) {
 
+        //String path = Paths.get(String.valueOf(Main.class.getResource("../kiss"))).toAbsolutePath().toString();
 
 
 
+        File resouceDir = new File(args[0]);
+        ArrayList<File> files = new ArrayList<>();
 
 
-       // if (args.length > 0) {
-         //   for (String arg : args) {
+        Collections.addAll(files, resouceDir.listFiles());
+
+
+        for (File file : files) {
+            System.out.println("Current file o be processed: " + file.getAbsolutePath());
+            input_file_name = file.getPath();
+            Parser p = new Parser();
+            p.parseFile(input_file_name);
+            fsm = p.getParsedFile();
+
+            for (int i = 0; i < 3; i++) {
+                switch (i) {
+                    case 0: {
+                        //System.out.println("ONE HOT ");
+                        OneHotCode oc = new OneHotCode(fsm);
+                        oc.encoding();
+                        //oc.printStatesCode();
+                        fsm_name = new File(input_file_name).getParentFile().getParent() + "/verilog/" + Main.ONEHOTE;
+                        ;
+                        break;
+                    }
+                    case 1: {
+                        fsm_name = new File(input_file_name).getParentFile().getParent() + "/verilog/" + Main.GRAY;
+                        //System.out.println("GRAY CODE");
+                        GrayCode gc = new GrayCode(fsm);
+                        gc.encoding();
+                        //gc.printStatesCode();
+                        break;
+                    }
+                    case 2: {
+                        // System.out.println("BINARY CODE");
+                        BinaryCode bc = new BinaryCode(fsm);
+                        bc.encoding();
+                        // bc.printStatesCode();
+                        fsm_name = new File(input_file_name).getParentFile().getParent() + "/verilog/" + Main.BINARY;
+                        break;
+                    }
+                }
+
+                // if (args.length > 0) {
+                //   for (String arg : args) {
                 System.out.println(" Current working directory : " + System.getProperty("user.dir"));
 
-               // input_file_name = arg;
-                input_file_name = Main.class.getResource("../dk17.kiss2").getPath();
-                Parser p = new Parser();
-                p.parseFile(input_file_name);
+                // input_file_name = arg;
+
 
                 // Representation of the FSM
-                fsm = p.getParsedFile();
 
 
                 // TODO - here you go
@@ -61,7 +113,11 @@ public class Main {
                 fsm.setInitialState(fsm.getStates()[0]);
             }*/
 
+
                 createVerilogFileTypeD();
+            }
+        }
+
            // }
 
        // } else {
@@ -123,8 +179,8 @@ public class Main {
             //Declare the states in the state register, states are unordered
             for (int i = 0; i < states.length; i++) {
                 writer.write("\tparameter ");
-                //writer.write(states[i].getName() + " = " + i);
-                writer.write(statenames.get(states[i].getName()) + " = " + i);
+                //writer.write(states[i].getName() + " = " + );
+                writer.write(statenames.get(states[i].getName()) + " = " + states[i].getCode());
                 writer.write(";");
                 writer.newLine();
             }
@@ -208,7 +264,8 @@ public class Main {
             writer.newLine();
             writer.write("endmodule");
             writer.newLine();
-            System.out.println("Path to generated file: " + System.getProperty("user.dir") + "/verilog/" + fsm_name + ".v");
+            //System.out.println("Path to generated file: " + System.getProperty("user.dir") + "/verilog/" + fsm_name + ".v");
+            System.out.println(file.getAbsolutePath());
             //System.out.println(fsm.toString());
             writer.close();
         } catch (IOException e) {
@@ -220,7 +277,18 @@ public class Main {
     }
 
     private static void createVerilogFileTypeD() {
-        String fsm_name = input_file_name.replaceAll(".kiss2", "").replaceAll(".*kiss_files/","");
+        //String fsm_name = input_file_name.replaceAll(".kiss2", "").replaceAll(".*kiss_files/","");
+        String[] paths = new File(input_file_name).getName().split("\\.");
+        String outFile =paths[0];
+
+
+        if(!Files.exists(Paths.get(fsm_name))){
+            try {
+                Files.createDirectories(Paths.get(fsm_name));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         State[] states = fsm.getStates();
 
         //setting new state names
@@ -231,10 +299,11 @@ public class Main {
 
         //write verilog code line by line
         try {
-            File file = new File("verilog/" + fsm_name + ".v");
+            //File file = new File("verilog/" + fsm_name + ".v");
+            File file = new File(fsm_name + outFile+".v");
             file.getParentFile().mkdirs();
             BufferedWriter writer = new BufferedWriter(new FileWriter(file));
-            writer.write("module " + fsm_name + " (clk, data_in, ");
+            writer.write("module " + outFile + " (clk, data_in, ");
             if (fsm.getInitialState() != null) {
                 writer.write("reset, ");
             }
@@ -256,7 +325,7 @@ public class Main {
             writer.newLine();
             writer.write("\t// Declare state register");
             writer.newLine();
-            writer.write("\treg [" + (Integer.toBinaryString(fsm.getNum_states()-1).length()-1) + ":0] state;");
+            writer.write("\treg [" + (StateEncoding.numberofBits-1) + ":0] state;");
             writer.newLine();
             writer.newLine();
             writer.write("\t// Declare states");
@@ -266,7 +335,7 @@ public class Main {
             for (int i = 0; i < states.length; i++) {
                 writer.write("\tparameter ");
                 //writer.write(states[i].getName() + " = " + i);
-                writer.write(statenames.get(states[i].getName()) + " = " + i);
+                writer.write(statenames.get(states[i].getName()) + " = " + states[i].getCode());
                 writer.write(";");
                 writer.newLine();
             }
@@ -336,7 +405,8 @@ public class Main {
             writer.newLine();
             writer.write("endmodule");
             writer.newLine();
-            System.out.println("Path to generated file: " + System.getProperty("user.dir") + "/verilog/" + fsm_name + ".v");
+            //System.out.println("Path to generated file: " + System.getProperty("user.dir") + "/verilog/" + fsm_name + ".v");
+            System.out.println(file.getAbsolutePath());
             //System.out.println(fsm.toString());
             writer.close();
         } catch (IOException e) {

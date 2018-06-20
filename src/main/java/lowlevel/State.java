@@ -155,4 +155,25 @@ public class State {
 
         return outputs;
     }
+
+
+    /**
+     * created by Shervin Peiro
+     * it transfoms the nextSateMap<TRANSITION_ID, NEXT_STATE> to a HashMap<NEXT_STATE,TRANSITION_IDs>
+     * @return
+     */
+    public HashMap<State, ArrayList<Long>> getNextStateMap(){
+        HashMap<State, ArrayList<Long>> res = new HashMap<State, ArrayList<Long>>();
+        for(long transition: this.nextStateMap.keySet()){
+            if(!res.containsKey(this.nextStateMap.get(transition))){
+                ArrayList<Long> values = new ArrayList<Long>();
+                values.add(transition);
+                res.put(this.nextStateMap.get(transition), values);
+            }else{
+               ArrayList<Long> tmp = res.get(this.nextStateMap.get(transition));
+               tmp.add(transition);
+            }
+        }
+        return res;
+    }
 }
