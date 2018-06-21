@@ -1,9 +1,6 @@
 package main;
 
-import Task1.BinaryCode;
-import Task1.GrayCode;
-import Task1.OneHotCode;
-import Task1.StateEncoding;
+import Task1.*;
 import io.Parser;
 import lowlevel.ParsedFile;
 //import org.stringtemplate.v4.*;
@@ -35,12 +32,14 @@ public class Main {
     private final static String ONEHOTE = "onehot/";
     private final static String GRAY = "gray/";
     private final static String BINARY = "binary/";
+    private final static String DEPTHFIRST = "depthfirst/";
+    private final static String PRIM = "prim/";
+    private final static String KRUSKAL = "kruskal/";
     private static String fsm_name;
 
     public static void main(String[] args) {
 
         //String path = Paths.get(String.valueOf(Main.class.getResource("../kiss"))).toAbsolutePath().toString();
-
 
 
         File resouceDir = new File(args[0]);
@@ -49,73 +48,115 @@ public class Main {
 
         Collections.addAll(files, resouceDir.listFiles());
 
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter("/Users/scherwinpeiro/Desktop/LLST1/src/main/resources/evaluation.csv"));
+            writer.write( ";"+"ONEHOT;"+"GRAYCODE;"+"BINARY;"+"DEPTHFIRST;"+"PRIM;"+"KRUSKAL;");
+            writer.newLine();
+            for (File file : files) {
+                System.out.println("Current file o be processed: " + file.getAbsolutePath());
+                input_file_name = file.getPath();
+                Parser p = new Parser();
+                p.parseFile(input_file_name);
+                fsm = p.getParsedFile();
 
-        for (File file : files) {
-            System.out.println("Current file o be processed: " + file.getAbsolutePath());
-            input_file_name = file.getPath();
-            Parser p = new Parser();
-            p.parseFile(input_file_name);
-            fsm = p.getParsedFile();
+                writer.write(new File(input_file_name).getName().split("\\.")[0] +";");
+                for (int i = 0; i < 6; i++) {
+                    switch (i) {
+                        case 0: {
 
-            for (int i = 0; i < 3; i++) {
-                switch (i) {
-                    case 0: {
-                        //System.out.println("ONE HOT ");
-                        OneHotCode oc = new OneHotCode(fsm);
-                        oc.encoding();
-                        //oc.printStatesCode();
-                        fsm_name = new File(input_file_name).getParentFile().getParent() + "/verilog/" + Main.ONEHOTE;
-                        ;
-                        break;
+                            //System.out.println("ONE HOT ");
+                            OneHotCode oc = new OneHotCode(fsm);
+                            oc.encoding();
+                            writer.write(Float.toString(oc.evaluate())+";");
+                            //oc.printStatesCode();
+                            fsm_name = new File(input_file_name).getParentFile().getParent() + "/verilog/" + Main.ONEHOTE;
+                            ;
+                            break;
+                        }
+                        case 1: {
+
+                            //System.out.println("GRAY CODE");
+                            GrayCode gc = new GrayCode(fsm);
+                            gc.encoding();
+                            //gc.printStatesCode();
+                            writer.write(Float.toString(gc.evaluate())+";");
+                            fsm_name = new File(input_file_name).getParentFile().getParent() + "/verilog/" + Main.GRAY;
+                            break;
+                        }
+                        case 2: {
+                            // System.out.println("BINARY CODE");
+                            BinaryCode bc = new BinaryCode(fsm);
+                            bc.encoding();
+                            // bc.printStatesCode();
+                            writer.write(Float.toString(bc.evaluate())+";");
+                            fsm_name = new File(input_file_name).getParentFile().getParent() + "/verilog/" + Main.BINARY;
+                            break;
+                        }
+                        case 3: {
+                            // System.out.println("BINARY CODE");
+                            Depthfirst bc = new Depthfirst(fsm);
+                            bc.encoding();
+                            // bc.printStatesCode();
+                            writer.write(Float.toString(bc.evaluate())+";");
+                            fsm_name = new File(input_file_name).getParentFile().getParent() + "/verilog/" + Main.DEPTHFIRST;
+                            break;
+                        }
+                        case 4: {
+                            // System.out.println("BINARY CODE");
+                            Prim df = new Prim(fsm);
+                            df.encoding();
+                            // bc.printStatesCode();
+                            writer.write(Float.toString(df.evaluate())+";");
+                            fsm_name = new File(input_file_name).getParentFile().getParent() + "/verilog/" + Main.PRIM;
+                            break;
+                        }
+                        case 5: {
+                            // System.out.println("BINARY CODE");
+                            Kruskal pr = new Kruskal(fsm);
+                            pr.encoding();
+                            // bc.printStatesCode();
+                            writer.write(Float.toString(pr.evaluate())+";");
+                            fsm_name = new File(input_file_name).getParentFile().getParent() + "/verilog/" + Main.KRUSKAL;
+                            break;
+                        }
                     }
-                    case 1: {
-                        fsm_name = new File(input_file_name).getParentFile().getParent() + "/verilog/" + Main.GRAY;
-                        //System.out.println("GRAY CODE");
-                        GrayCode gc = new GrayCode(fsm);
-                        gc.encoding();
-                        //gc.printStatesCode();
-                        break;
-                    }
-                    case 2: {
-                        // System.out.println("BINARY CODE");
-                        BinaryCode bc = new BinaryCode(fsm);
-                        bc.encoding();
-                        // bc.printStatesCode();
-                        fsm_name = new File(input_file_name).getParentFile().getParent() + "/verilog/" + Main.BINARY;
-                        break;
-                    }
-                }
 
-                // if (args.length > 0) {
-                //   for (String arg : args) {
-                System.out.println(" Current working directory : " + System.getProperty("user.dir"));
+                    // if (args.length > 0) {
+                    //   for (String arg : args) {
+                    System.out.println(" Current working directory : " + System.getProperty("user.dir"));
 
-                // input_file_name = arg;
+                    // input_file_name = arg;
 
 
-                // Representation of the FSM
+                    // Representation of the FSM
 
 
-                // TODO - here you go
-                System.out.printf("%n---------------------------------------------------------------------------%n");
-                System.out.printf("                   Welcome to Verilog KISS FSM Generator%n");
-                System.out.printf("---------------------------------------------------------------------------%n%n");
-                System.out.printf("Parsed KISS file informations:%n");
-                System.out.printf("  - FSM KISS file: %s%n", input_file_name);
-                System.out.printf("  - Number of inputs: %d%n", fsm.getNumInputs());
-                System.out.printf("  - Number of outputs: %d%n", fsm.getNumOutputs());
-                System.out.printf("  - Number of states: %d%n", fsm.getNum_states());
-                System.out.printf("  - Number of transitions: %d%n%n", fsm.getNum_transitions());
+                    // TODO - here you go
+                    System.out.printf("%n---------------------------------------------------------------------------%n");
+                    System.out.printf("                   Welcome to Verilog KISS FSM Generator%n");
+                    System.out.printf("---------------------------------------------------------------------------%n%n");
+                    System.out.printf("Parsed KISS file informations:%n");
+                    System.out.printf("  - FSM KISS file: %s%n", input_file_name);
+                    System.out.printf("  - Number of inputs: %d%n", fsm.getNumInputs());
+                    System.out.printf("  - Number of outputs: %d%n", fsm.getNumOutputs());
+                    System.out.printf("  - Number of states: %d%n", fsm.getNum_states());
+                    System.out.printf("  - Number of transitions: %d%n%n", fsm.getNum_transitions());
 
 
-                //if no reset state, set to first state of array
+                    //if no reset state, set to first state of array
            /* if (fsm.getInitialState() == null) {
                 fsm.setInitialState(fsm.getStates()[0]);
             }*/
 
 
-                createVerilogFileTypeD();
+                    createVerilogFileTypeD();
+                }
+                writer.newLine();
+
             }
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
            // }
@@ -443,5 +484,9 @@ public class Main {
     public static  ParsedFile getFSM(){
         return Main.fsm;
     }
+
+
+
+
 
 }

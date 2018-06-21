@@ -1,15 +1,26 @@
 package Task1;
 
+import com.sun.javafx.geom.Edge;
+import javafx.util.Pair;
 import lowlevel.ParsedFile;
 import lowlevel.State;
 
 import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 public abstract class StateEncoding<T> {
+    final protected class Edge <T>{
+        public T start;
+        public T end;
+        public double weight;
+    }
+
+
+
+
+
+
+
     // encoding types
 
     public final static int GRAY = 0;
@@ -17,6 +28,10 @@ public abstract class StateEncoding<T> {
     public final static int JOHNSON = 2;
     public final static int BINARY = 3;
     public final static int HUFFMAN = 4;
+    public final static int DEPTHFIRST = 5;
+    public final static int PRIM = 6;
+    public final static int KRUSKAL = 7;
+
 
     public static int numberofBits = 0;
 
@@ -377,6 +392,161 @@ public abstract class StateEncoding<T> {
             System.out.println(binary);
         });
     }
+
+
+    public int getCodeWidth() {
+        long maxCode = -1;
+        for (int i = 0; i < fsm.getNum_states(); i++) {
+            maxCode = fsm.getStates()[i].getCode() > maxCode ? fsm.getStates()[i].getCode() : maxCode;
+        }
+        return Long.toBinaryString(maxCode).length();
+    }
+
+
+    public static int transition_weight(long input) {
+        int weight = 1;
+        while (input != 0) {
+            if ((input & 3) == 3) {
+                weight = weight << 1;
+            }
+            input = input >> 2;
+        }
+        return weight;
+    }
+
+
+    public float evaluate() {
+        float fitness = 0;
+        long[][] transistions;
+        int sumweight;
+        for (int i = 0; i < fsm.getNum_states(); i++) {
+            transistions = fsm.getStates()[i].getTransitions();
+            sumweight = 0;
+            for (int j = 0; j < transistions.length; j++) {
+                fitness += (transition_weight(transistions[j][1]))
+                        * hamming_dist(transistions[j][0], transistions[j][2]);
+                sumweight += transition_weight(transistions[j][1]);
+            }
+        }
+        return fitness / ((1l<<fsm.getNumInputs())*fsm.getNum_states());
+    }
+
+
+
+    private static int hamming_dist(long l, long m) {
+        // TODO Auto-generated method stub
+        return Long.bitCount(m ^ l);
+    }
+
+
+    private State assumedNext(State curr, int param) {
+        HashMap<State, Integer> weightNextState = new HashMap<State, Integer>();
+        long transistions[][] = curr.getTransitions();
+        int max = 0;
+        for (int i = 0; i < transistions.length; i++) {
+            // uncoded
+            if (param == 0 && curr.getNextState(transistions[i][1]).getCode() == -1) {
+                weightNextState.put(curr.getNextState(transistions[i][1]), transition_weight(transistions[i][1]));
+            }
+            // real next
+            if (param == 1 && !curr.getNextState(transistions[i][1]).equals(curr)) {
+                weightNextState.put(curr.getNextState(transistions[i][1]), transition_weight(transistions[i][1]));
+            }
+            // real next unencoded
+            if (param == 2 && !curr.getNextState(transistions[i][1]).equals(curr)
+                    && curr.getNextState(transistions[i][1]).getCode() == -1) {
+                weightNextState.put(curr.getNextState(transistions[i][1]), transition_weight(transistions[i][1]));
+            }
+        }
+        if (weightNextState.isEmpty()) {
+            return null;
+        }
+        max = (Collections.max(weightNextState.values()));
+        for (Map.Entry<State, Integer> entry : weightNextState.entrySet()) {
+            if (entry.getValue() == max) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+
+
+
+    protected State assumed_next_uncodeed(State curr) {
+        return assumedNext(curr, 0);
+    }
+
+    protected State assumed_real_next(State curr) {
+        return assumedNext(curr, 1);
+    }
+
+    protected State assumed_real_next_uncodeed(State curr) {
+        return assumedNext(curr, 2);
+    }
+
+    protected ArrayList<Edge<State>> get_all_Edges(){
+        ArrayList<Edge<State>> allEdges = new ArrayList<>();
+        long[][]transistions;
+        State curr;
+        Edge<State> temp;
+        HashMap<Pair<State, State>, Integer> edges = new HashMap<>();
+        for (int i = 0; i < fsm.getNum_states(); i++) {
+            curr=fsm.getStates()[i];
+            transistions=curr.getTransitions();
+            for (int j = 0; j < transistions.length; j++) {
+                if (!curr.getNextState(transistions[j][1]).equals(curr)) {
+                    if (edges.containsKey(new Pair<State, State>(curr, curr.getNextState(transistions[j][1])))) {
+                        edges.put(new Pair<State, State>(curr, curr.getNextState(transistions[j][1])),
+                                edges.get(new Pair<State, State>(curr, curr.getNextState(transistions[j][1])))
+                                        + transition_weight(transistions[j][1]));
+                    } else if (edges.containsKey(new Pair<State, State>(curr.getNextState(transistions[j][1]), curr))) {
+                        edges.put(new Pair<State, State>(curr.getNextState(transistions[j][1]), curr),
+                                edges.get(new Pair<State, State>(curr.getNextState(transistions[j][1]), curr))
+                                        + transition_weight(transistions[j][1]));
+                    } else {
+                        edges.put(new Pair<State, State>(curr, curr.getNextState(transistions[j][1])),
+                                transition_weight(transistions[j][1]));
+                    }
+                }
+            }
+        }
+        for (Map.Entry<Pair<State, State>, Integer> entry : edges.entrySet()) {
+            temp=new Edge<State>();
+            temp.start=entry.getKey().getKey();
+            temp.end=entry.getKey().getValue();
+            temp.weight=entry.getValue();
+            allEdges.add(temp);
+        }
+        return allEdges;
+    }
+
+
+    protected long minHammingdistance(long code, ArrayList<Long> codes) {
+        long opt = -1;
+        int optHammingDistance=Integer.MAX_VALUE;
+        for (int i = 0; i < codes.size(); i++) {
+            if (hamming_dist(code, codes.get(i))<optHammingDistance) {
+                optHammingDistance=hamming_dist(code, codes.get(i));
+                opt=codes.get(i);
+            }
+        }
+        return opt;
+    }
+
+
+    protected void reset_encoding() {
+        for (int j = 0; j < fsm.getNum_states(); j++) {
+            fsm.getStates()[j].setCode(-1);
+        }
+    }
+
+
+
+
+
+
+
 
 
 }
